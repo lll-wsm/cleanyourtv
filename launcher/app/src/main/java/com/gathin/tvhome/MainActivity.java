@@ -1167,6 +1167,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         } else {
             sky.setVisibility(View.VISIBLE);
             wallpaperPlayer.start();
+            // A still wallpaper leaves the decoder free: fill in any missing thumbnail now. With a film playing the
+            // pass waits for onPause, where the decoder is free too.
+            ThumbCache.ensure(this);
         }
         handler.postDelayed(minuteTick, MINUTE_MS);
         if (festive && lamp != null) {
@@ -1348,6 +1351,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }
         sky.setVisibility(View.VISIBLE);
         wallpaperPlayer.stop();
+
+        // Fill in any missing thumbnail now that Home is not in front and the decoder is free: the pass wants the
+        // same hardware decoder the wallpaper holds, and contending with it made a scan take minutes instead of
+        // seconds. Nothing here blocks; it runs on a low priority worker.
+        ThumbCache.ensure(this);
         stopAmbientAnimation();
         hero.animate().cancel();
         ambient.animate().cancel();
