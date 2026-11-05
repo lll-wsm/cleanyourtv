@@ -224,6 +224,8 @@ final class Config {
     final boolean ambientGlow;
     /** A video behind Home instead of the pictures (config.xml, video_wallpaper); off falls back to them. */
     final boolean videoWallpaper;
+    /** How far that film is dimmed, 0 to 90 (config.xml, video_wallpaper_dim), so the clock stays readable. */
+    final int videoWallpaperDim;
     /** The focus highlight in the focused app's colour on every tile (config.xml, app_glow), as cinematic_home does for the dock. */
     final boolean appGlow;
     /** The rows fade out under the clock instead of being cut off (config.xml, fade_rows); TopFade. */
@@ -295,7 +297,7 @@ final class Config {
                    boolean handleViewInputs, boolean tileMenu, boolean dockEvenPadding, boolean dockBand, boolean cinematicDots, boolean cinematicWhiteFocus, boolean wifiStatusColor, int cinematicScrim, int cinematicArt,
                    Map<String, Set<String>> wallpaperMoods, boolean gamepadPassthrough, boolean consumeVolumeKeys, boolean powerOnHome, boolean homeLongPressHome, boolean wifiStatusWarnings, List<String> topBarApps, boolean showGreeting, boolean headerWhite, boolean clockWallpaper, int clockWallpaperDim, boolean clockGlow, String glassStyle, boolean singleRow, boolean dockBandAll, boolean lunarDate, int lunarUtcOffset, boolean dateBelowClock, boolean vpnPill, String locale, boolean powerOnHomeAlways, boolean inputsConnectedOnly, boolean inputsCecStateOnly,
                    int openOnStartNetworkWait, boolean openOnStartOnWake, boolean iconOnlyVpn, String clockFormat, boolean backOpensClock, boolean glowSnap,
-                   boolean videoWallpaper) {
+                   boolean videoWallpaper, int videoWallpaperDim) {
         this.handleViewInputs = handleViewInputs;
         this.tileMenu = tileMenu;
         this.inputKeycodes = inputKeycodes;
@@ -379,6 +381,7 @@ final class Config {
         this.cinematicHome = cinematicHome;
         this.ambientGlow = ambientGlow;
         this.videoWallpaper = videoWallpaper;
+        this.videoWallpaperDim = videoWallpaperDim;
         this.appGlow = appGlow;
         this.fadeRows = fadeRows;
         this.homeIdleClockMinutes = homeIdleClockMinutes;
@@ -507,6 +510,7 @@ final class Config {
         boolean cinematic = res.getBoolean(R.bool.cinematic_home);
         boolean ambientGlow = res.getBoolean(R.bool.ambient_glow);
         boolean videoWallpaper = res.getBoolean(R.bool.video_wallpaper);
+        int videoWallpaperDim = res.getInteger(R.integer.video_wallpaper_dim);
         boolean appGlow = res.getBoolean(R.bool.app_glow);
         boolean fadeRows = res.getBoolean(R.bool.fade_rows);
         int idleClockMinutes = res.getInteger(R.integer.home_idle_clock_minutes);
@@ -622,6 +626,7 @@ final class Config {
             cinematic = bool(json, "cinematic_home", cinematic);
             ambientGlow = bool(json, "ambient_glow", ambientGlow);
             videoWallpaper = bool(json, "video_wallpaper", videoWallpaper);
+            videoWallpaperDim = integer(json, "video_wallpaper_dim", videoWallpaperDim, 0, 90);
             appGlow = bool(json, "app_glow", appGlow);
             fadeRows = bool(json, "fade_rows", fadeRows);
             idleClockMinutes = integer(json, "home_idle_clock_minutes", idleClockMinutes, 0, 1440);
@@ -722,7 +727,7 @@ final class Config {
                 Math.max(0, Math.min(90, clockWallpaperDim)), clockGlow, glassStyle, singleRow && dockRow, dockBandAll, lunar, lunarOffset,
                 dateBelowClock, vpnPill, locale, powerOnHomeAlways, inputsConnectedOnly, inputsCecStateOnly,
                 Math.max(0, Math.min(600, openOnStartNetworkWait)), openOnStartOnWake, iconOnlyVpn, clockFormat, backOpensClock, glowSnap,
-                videoWallpaper);
+                videoWallpaper, Math.max(0, Math.min(90, videoWallpaperDim)));
     }
 
     /**

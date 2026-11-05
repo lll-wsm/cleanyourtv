@@ -510,7 +510,16 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         // the theme's background, so launch looks the same.
         getWindow().setBackgroundDrawable(null);
         wallpaperPlayer = new WallpaperPlayer(this, root, cfg);
-        videoWallpaper = cfg.videoWallpaper ? new VideoWallpaperPlayer(this, root) : null;
+        videoWallpaper = cfg.videoWallpaper ? new VideoWallpaperPlayer(this, root, cfg.videoWallpaperDim) : null;
+        if (videoWallpaper != null) {
+            // A clip the TV cannot decode (4K60 on this class of decoder) hands Home back to the backdrop and the
+            // pictures instead of leaving a black screen until the next resume.
+            videoWallpaper.onFailed = () -> {
+                videoPlaying = false;
+                sky.setVisibility(View.VISIBLE);
+                wallpaperPlayer.start();
+            };
+        }
         sky = findViewById(R.id.sky);
         sky.setIntensity(cfg.skyIntensity);
         glass = findViewById(R.id.glass);

@@ -37,7 +37,11 @@ final class VideoWallpaperPlayer {
 
     private final FrameLayout root;
     private final TextureView view;
+    private final View shade;
+    private final int dim;
     private final List<File> files;
+    /** Called when the film cannot play, so Home can put its backdrop and pictures back. */
+    Runnable onFailed;
 
     private MediaPlayer player;
     private SurfaceTexture texture;
@@ -47,9 +51,14 @@ final class VideoWallpaperPlayer {
     /** Set by a failed decode: the folder stays as it was, but this run falls back to the pictures. */
     private boolean failed;
 
-    VideoWallpaperPlayer(Context context, FrameLayout root) {
+    VideoWallpaperPlayer(Context context, FrameLayout root, int dim) {
         this.root = root;
+        this.dim = Math.max(0, Math.min(90, dim));
         this.files = videos(context);
+        this.shade = new View(context);
+        this.shade.setBackgroundColor(0xFF000000);
+        this.shade.setAlpha(this.dim / 100f);
+        this.shade.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         this.view = new TextureView(context);
         this.view.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         this.view.setSurfaceTextureListener(new TextureView.SurfaceTextureListener() {
@@ -100,7 +109,13 @@ final class VideoWallpaperPlayer {
             root.addView(view, 0, new FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT, Gravity.FILL));
         }
+        if (shade.getParent() == null && dim > 0) {
+            // Over the film, under everything Home draws: a bright clip would otherwise wash the clock out.
+            root.addView(shade, 1, new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT, Gravity.FILL));
+        }
         view.setVisibility(View.VISIBLE);
+        shade.setVisibility(dim > 0 ? View.VISIBLE : View.GONE);
         // The film covers the screen, so a plain colour underneath is only overdraw.
         root.setBackground(null);
         if (texture != null) attach();
@@ -113,6 +128,7 @@ final class VideoWallpaperPlayer {
         playing = false;
         release();
         view.setVisibility(View.GONE);
+        shade.setVisibility(View.GONE);
     }
 
     /** Memory pressure: the film comes back on the next start, so give the decoder up now. */
@@ -125,6 +141,7 @@ final class VideoWallpaperPlayer {
         playing = false;
         release();
         if (view.getParent() != null) root.removeView(view);
+        if (shade.getParent() != null) root.removeView(shade);
     }
 
     private void attach() {
@@ -147,6 +164,7 @@ final class VideoWallpaperPlayer {
                 failed = true;
                 player = null;
                 stop();
+                if (onFailed != null) onFailed.run();
                 return true;
             });
             next.setOnPreparedListener(mp -> {
@@ -159,6 +177,7 @@ final class VideoWallpaperPlayer {
             failed = true;
             next.release();
             stop();
+            if (onFailed != null) onFailed.run();
         }
     }
 
