@@ -512,6 +512,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         wallpaperPlayer = new WallpaperPlayer(this, root, cfg);
         SystemSettings.vendorFirst = cfg.settingsVendorFirst;
         AppAdapter.squareTiles = "square".equals(cfg.tileShape);
+        // A single row packs many tiles across: keep a real gap between them instead of letting them touch.
+        AppAdapter.gapDp = cfg.singleRow ? 22f : 12f;
         videoWallpaper = cfg.videoWallpaper ? new VideoWallpaperPlayer(this, root, cfg.videoWallpaperDim) : null;
         if (videoWallpaper != null) {
             // A clip the TV cannot decode (4K60 on this class of decoder) hands Home back to the backdrop and the

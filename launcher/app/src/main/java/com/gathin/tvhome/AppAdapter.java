@@ -100,6 +100,8 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     static final float FOCUS_SCALE = 1.10f;
     /** tile_shape "square" (theme): 1:1 tiles with a macOS-like corner, the icon alone in them. */
     static boolean squareTiles;
+    /** Room taken out of a cell before the tile is sized, in dp (12 in a grid, wider in a single row). */
+    static float gapDp = 12f;
     /** Design size of a tile (dp); tiles shrink from here when the columns don't fit, see tileWidthPx. */
     static final float DESIGN_W_DP = 180f, DESIGN_H_DP = 101f;
 
@@ -111,8 +113,11 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         int design = Math.round(DESIGN_W_DP * density);
         if (innerWidthPx <= 0 || columns <= 0) return design;
         int cell = innerWidthPx / columns;
-        int fit = (int) ((cell - 12 * density) / FOCUS_SCALE);
-        return Math.max(Math.round(80 * density), Math.min(design, fit));
+        int fit = (int) ((cell - gapDp * density) / FOCUS_SCALE);
+        // No 80dp floor here: more columns than the design width holds simply shrink the tile. With a floor, 12
+        // columns in a single row came out wider than their own cell (160px in a 138px cell) and the icons touched,
+        // because the smallest tile must always be the one that leaves a gap.
+        return Math.max(Math.round(40 * density), Math.min(design, fit));
     }
 
     static int tileHeightPx(int tileWidthPx) {
@@ -168,7 +173,11 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         // Shrink at most to MIN_HEIGHT_FIT of the width-only size. Below that the tiles look lost in their wide
         // columns (2 rows under a titled dock came out at 80dp); the rows that still don't fit run off the bottom
         // and scroll, and MainActivity keeps the title's room above the dock.
-        return Math.max(Math.max(Math.round(80 * density), Math.round(w * MIN_HEIGHT_FIT)), Math.min(w, byHeight));
+        // The 80dp floor belongs to a grid, where a tile must stay legible. It must never push a tile wider than its
+        // own cell, though: at 12 columns in a single row the width-only size is already under 80dp, and the floor
+        // made the icons overlap instead of leaving a gap.
+        float floor = Math.min(w, Math.max(80 * density, w * MIN_HEIGHT_FIT));
+        return Math.round(Math.max(floor, Math.min(w, byHeight)));
     }
 
     /** The smallest share of the width-only tile size that fitting rows_below_dock into the height may go to. */
@@ -185,6 +194,8 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     private boolean reordering;
     private final TileListener listener;
     private final int dockSize;
+    /** config columns: in a single row it is how many tiles share the width, so more columns mean smaller icons. */
+    private final int columns;
     /** config dock_row: false makes the dock apps the first tiles of one plain grid (names shown, no empty slots). */
     private final boolean dockRow;
     /** config single_row: tiles sit in one sideways row, each as wide as a grid column would be. */
@@ -229,6 +240,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         this.ctx = ctx;
         this.listener = listener;
         this.dockSize = dockSize;
+        this.columns = Math.max(1, cfg.columns);
         this.favourites = cfg.dockApps;
         this.fillDock = cfg.fillDock;
         this.hidden = new HashSet<>(cfg.hiddenApps);
@@ -420,7 +432,10 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         float density = parent.getResources().getDisplayMetrics().density;
         int width = parent.getWidth() > 0 ? parent.getWidth() : parent.getMeasuredWidth();
         int inner = width - parent.getPaddingLeft() - parent.getPaddingRight();
-        int w = tileWidthPx(inner, parent.getHeight(), dockSize, rowsBelowDock, dockTitle, dockRow, density), h = tileHeightPx(w);
+        // In a single row the columns setting is the density: 4 show four big icons, 12 twelve small ones, and the
+        // gap between them stays the same fraction of a cell.
+        int sizing = singleRow ? columns : dockSize;
+        int w = tileWidthPx(inner, parent.getHeight(), sizing, rowsBelowDock, dockTitle, dockRow, density), h = tileHeightPx(w);
         View card = v.findViewById(R.id.card);
         ViewGroup.LayoutParams cardLp = card.getLayoutParams();
         cardLp.width = w;
@@ -438,7 +453,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         }
         name.setLayoutParams(nameLp);
         // A sideways row would stretch a match_parent item across the whole screen: give it a grid column's width.
-        if (singleRow) v.getLayoutParams().width = inner / dockSize;
+        if (singleRow) v.getLayoutParams().width = inner / sizing;
         if (uniformTiles) {
             // tvOS-style tile: a large centred mark, no caption inside the card.
             View icon = v.findViewById(R.id.icon);
@@ -517,7 +532,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                 float density = h.card.getResources().getDisplayMetrics().density;
                 int side = h.card.getLayoutParams().width;
                 ViewGroup.LayoutParams ilp = h.icon.getLayoutParams();
-                int iconSide = Math.round(side * 0.86f);
+                int iconSide = Math.round(side * 0.84f);
                 ilp.width = iconSide;
                 ilp.height = iconSide;
                 if (ilp instanceof ViewGroup.MarginLayoutParams) {
