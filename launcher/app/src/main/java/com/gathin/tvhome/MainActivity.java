@@ -514,7 +514,15 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         AppAdapter.squareTiles = "square".equals(cfg.tileShape);
         // A single row packs many tiles across: keep a real gap between them instead of letting them touch.
         AppAdapter.gapDp = cfg.singleRow ? 22f : 12f;
-        videoWallpaper = cfg.videoWallpaper ? new VideoWallpaperPlayer(this, root, cfg.videoWallpaperDim) : null;
+        // The film the viewer picked, or the first one when the mode is a single wallpaper; otherwise all of them in
+        // name order, which the player walks through.
+        java.util.List<File> films = VideoWallpaperPlayer.videos(this);
+        if (cfg.singleWallpaper && !films.isEmpty()) {
+            File only = null;
+            for (File f : films) if (cfg.videoChoice != null && f.getName().equals(cfg.videoChoice)) only = f;
+            films = java.util.Collections.singletonList(only != null ? only : films.get(0));
+        }
+        videoWallpaper = cfg.videoWallpaper ? new VideoWallpaperPlayer(this, root, cfg.videoWallpaperDim, films) : null;
         if (videoWallpaper != null) {
             // A clip the TV cannot decode (4K60 on this class of decoder) hands Home back to the backdrop and the
             // pictures instead of leaving a black screen until the next resume.

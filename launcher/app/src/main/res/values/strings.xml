@@ -73,6 +73,14 @@
     <string name="quick_apps_hint">Re-enable</string>
     <string name="on">On</string>
     <string name="video_wallpaper_state">Video wallpaper: %1$s</string>
+    <string name="pick_wallpaper">Pick a wallpaper</string>
+    <string name="pick_video">Pick a video</string>
+    <string name="pick_empty">Nothing here yet</string>
+    <string name="wallpaper_mode_state">Wallpaper: %1$s</string>
+    <string name="wallpaper_mode_single">one</string>
+    <string name="wallpaper_mode_rotate">rotating</string>
+    <string name="choose_wallpaper">Choose a wallpaper…</string>
+    <string name="choose_video">Choose a video…</string>
     <string name="off">Off</string>
     <string name="enable">Enable</string>
     <string name="input_key_service_description">Opens the input switcher when the remote\'s Input button is pressed.</string>

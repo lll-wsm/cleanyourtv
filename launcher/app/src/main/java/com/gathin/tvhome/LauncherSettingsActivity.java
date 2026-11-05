@@ -39,7 +39,10 @@ public final class LauncherSettingsActivity extends Activity {
     private final TextView[] clockChoices = new TextView[CLOCK_FORMATS.length];
     private TextView wallpaperChoice;
     private TextView videoWallpaperChoice;
+    private TextView wallpaperModeChoice;
     private boolean videoWallpaper;
+    /** "single" holds one picture (or one film); "rotate" lets the wallpaper rotation run. */
+    private String wallpaperMode;
     private TextView animationsChoice;
     private TextView advancedChoice;
     private TextView followThemeChoice;
@@ -65,6 +68,7 @@ public final class LauncherSettingsActivity extends Activity {
         });
         columns = config.columns;
         videoWallpaper = config.videoWallpaper;
+        wallpaperMode = "single".equals(choices.getString("wallpaper_mode", "rotate")) ? "single" : "rotate";
         rowsBelowDock = config.rowsBelowDock;
         dockOpacity = config.dockOpacity;
         clockFormat = config.clockFormat;
@@ -132,6 +136,15 @@ public final class LauncherSettingsActivity extends Activity {
         }
         wallpaperChoice = findViewById(R.id.wallpaperChoice);
         wallpaperChoice.setOnClickListener(v -> showWallpaperPicker());
+        wallpaperModeChoice = findViewById(R.id.wallpaperModeChoice);
+        wallpaperModeChoice.setOnClickListener(v -> {
+            wallpaperMode = "single".equals(wallpaperMode) ? "rotate" : "single";
+            choices.edit().putString("wallpaper_mode", wallpaperMode).apply();
+            changed();
+            refresh();
+        });
+        findViewById(R.id.chooseWallpaperChoice).setOnClickListener(v -> openPicker(WallpaperPickerActivity.KIND_STILLS));
+        findViewById(R.id.chooseVideoChoice).setOnClickListener(v -> openPicker(WallpaperPickerActivity.KIND_VIDEOS));
         videoWallpaperChoice = findViewById(R.id.videoWallpaperChoice);
         videoWallpaperChoice.setOnClickListener(v -> {
             // A preference, not a theme key: the theme ships the films and asks for them by default, the viewer
@@ -197,6 +210,11 @@ public final class LauncherSettingsActivity extends Activity {
         LinearLayout row = (LinearLayout) views[0].getParent();
         row.removeAllViews();
         for (int i = views.length - 1; i >= 0; i--) row.addView(views[i]);
+    }
+
+    private void openPicker(String kind) {
+        startActivity(new Intent(this, WallpaperPickerActivity.class)
+                .putExtra(WallpaperPickerActivity.EXTRA_KIND, kind));
     }
 
     private void showWallpaperPicker() {
@@ -321,6 +339,10 @@ public final class LauncherSettingsActivity extends Activity {
         for (int i = 0; i < clockChoices.length; i++) {
             clockChoices[i].setSelected(CLOCK_FORMATS[i].equals(clockFormat));
         }
+        wallpaperModeChoice.setText(getString(R.string.wallpaper_mode_state,
+                getString("single".equals(wallpaperMode) ? R.string.wallpaper_mode_single : R.string.wallpaper_mode_rotate)));
+        ((TextView) findViewById(R.id.chooseWallpaperChoice)).setText(R.string.choose_wallpaper);
+        ((TextView) findViewById(R.id.chooseVideoChoice)).setText(R.string.choose_video);
         videoWallpaperChoice.setText(getString(R.string.video_wallpaper_state,
                 getString(videoWallpaper ? R.string.on : R.string.off)));
         animationsChoice.setText(getString(R.string.animations_state,

@@ -51,10 +51,10 @@ final class VideoWallpaperPlayer {
     /** Set by a failed decode: the folder stays as it was, but this run falls back to the pictures. */
     private boolean failed;
 
-    VideoWallpaperPlayer(Context context, FrameLayout root, int dim) {
+    VideoWallpaperPlayer(Context context, FrameLayout root, int dim, List<File> films) {
         this.root = root;
         this.dim = Math.max(0, Math.min(90, dim));
-        this.files = videos(context);
+        this.files = films;
         this.shade = new View(context);
         this.shade.setBackgroundColor(0xFF000000);
         this.shade.setAlpha(this.dim / 100f);

@@ -232,6 +232,10 @@ final class Config {
     final int dockBottomRoom;
     /** "banner" (16:9 tiles) or "square" (the icon alone on a 1:1 card), config.xml tile_shape. */
     final String tileShape;
+    /** The film picked on the TV (preference video_choice), or null for all of them in name order. */
+    final String videoChoice;
+    /** wallpaper_mode "single": one picture and one film, held still, instead of the rotation and the sequence. */
+    final boolean singleWallpaper;
     /** The focus highlight in the focused app's colour on every tile (config.xml, app_glow), as cinematic_home does for the dock. */
     final boolean appGlow;
     /** The rows fade out under the clock instead of being cut off (config.xml, fade_rows); TopFade. */
@@ -303,7 +307,7 @@ final class Config {
                    boolean handleViewInputs, boolean tileMenu, boolean dockEvenPadding, boolean dockBand, boolean cinematicDots, boolean cinematicWhiteFocus, boolean wifiStatusColor, int cinematicScrim, int cinematicArt,
                    Map<String, Set<String>> wallpaperMoods, boolean gamepadPassthrough, boolean consumeVolumeKeys, boolean powerOnHome, boolean homeLongPressHome, boolean wifiStatusWarnings, List<String> topBarApps, boolean showGreeting, boolean headerWhite, boolean clockWallpaper, int clockWallpaperDim, boolean clockGlow, String glassStyle, boolean singleRow, boolean dockBandAll, boolean lunarDate, int lunarUtcOffset, boolean dateBelowClock, boolean vpnPill, String locale, boolean powerOnHomeAlways, boolean inputsConnectedOnly, boolean inputsCecStateOnly,
                    int openOnStartNetworkWait, boolean openOnStartOnWake, boolean iconOnlyVpn, String clockFormat, boolean backOpensClock, boolean glowSnap,
-                   boolean videoWallpaper, int videoWallpaperDim, boolean settingsVendorFirst, int dockBottomRoom, String tileShape) {
+                   boolean videoWallpaper, int videoWallpaperDim, boolean settingsVendorFirst, int dockBottomRoom, String tileShape, String videoChoice, boolean singleWallpaper) {
         this.handleViewInputs = handleViewInputs;
         this.tileMenu = tileMenu;
         this.inputKeycodes = inputKeycodes;
@@ -391,6 +395,8 @@ final class Config {
         this.settingsVendorFirst = settingsVendorFirst;
         this.dockBottomRoom = dockBottomRoom;
         this.tileShape = tileShape;
+        this.videoChoice = videoChoice;
+        this.singleWallpaper = singleWallpaper;
         this.appGlow = appGlow;
         this.fadeRows = fadeRows;
         this.homeIdleClockMinutes = homeIdleClockMinutes;
@@ -716,6 +722,12 @@ final class Config {
         // An on-TV wallpaper pick overrides the theme: a filename from the wallpapers/
         // collection, or "none". Unset means the theme decides (off by default).
         String wallpaperChoice = choices.getString(WALLPAPER_CHOICE_KEY, null);
+        // Wallpaper mode: "single" holds one picture still. Without a pick of its own it takes the first one, so
+        // switching to single does not need a second trip to the picker.
+        if ("single".equals(choices.getString("wallpaper_mode", "rotate")) && wallpaperChoice == null && dir != null) {
+            List<File> all = WallpaperRotation.images(new File(dir, "wallpapers"));
+            wallpaperChoice = all.isEmpty() ? null : all.get(0).getName();
+        }
         List<File> chosen = WallpaperRotation.chosen(dir == null ? Collections.emptyList()
                 : WallpaperRotation.images(new File(dir, "wallpapers")), wallpaper, wallpaperChoice);
         if (chosen != null) {
@@ -745,7 +757,9 @@ final class Config {
                 dateBelowClock, vpnPill, locale, powerOnHomeAlways, inputsConnectedOnly, inputsCecStateOnly,
                 Math.max(0, Math.min(600, openOnStartNetworkWait)), openOnStartOnWake, iconOnlyVpn, clockFormat, backOpensClock, glowSnap,
                 videoWallpaper, Math.max(0, Math.min(90, videoWallpaperDim)), settingsVendorFirst,
-                Math.max(0, Math.min(120, dockBottomRoom)), tileShape);
+                Math.max(0, Math.min(120, dockBottomRoom)), tileShape,
+                choices.getString("video_choice", null),
+                "single".equals(choices.getString("wallpaper_mode", "rotate")));
     }
 
     /**
