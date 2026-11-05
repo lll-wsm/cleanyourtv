@@ -29,6 +29,7 @@ public final class LauncherSettingsActivity extends Activity {
     static final String EXTRA_REORDER = "com.gathin.tvhome.extra.REORDER_FROM_SETTINGS";
     private SharedPreferences choices;
     /** The sizes the settings row offers; 9 and 11 are reachable from a theme's config.json only. */
+    private static final String VIDEO_WALLPAPER_KEY = "video_wallpaper";
     private static final int[] COLUMN_VALUES = {4, 5, 6, 7, 8, 10, 12};
     private final TextView[] columnChoices = new TextView[COLUMN_VALUES.length];
     private final TextView[] rowChoices = new TextView[4];
@@ -37,6 +38,8 @@ public final class LauncherSettingsActivity extends Activity {
     private static final String[] CLOCK_FORMATS = {"system", "12", "24"};
     private final TextView[] clockChoices = new TextView[CLOCK_FORMATS.length];
     private TextView wallpaperChoice;
+    private TextView videoWallpaperChoice;
+    private boolean videoWallpaper;
     private TextView animationsChoice;
     private TextView advancedChoice;
     private TextView followThemeChoice;
@@ -61,6 +64,7 @@ public final class LauncherSettingsActivity extends Activity {
             finish();
         });
         columns = config.columns;
+        videoWallpaper = config.videoWallpaper;
         rowsBelowDock = config.rowsBelowDock;
         dockOpacity = config.dockOpacity;
         clockFormat = config.clockFormat;
@@ -128,6 +132,15 @@ public final class LauncherSettingsActivity extends Activity {
         }
         wallpaperChoice = findViewById(R.id.wallpaperChoice);
         wallpaperChoice.setOnClickListener(v -> showWallpaperPicker());
+        videoWallpaperChoice = findViewById(R.id.videoWallpaperChoice);
+        videoWallpaperChoice.setOnClickListener(v -> {
+            // A preference, not a theme key: the theme ships the films and asks for them by default, the viewer
+            // turns them off for the pictures without editing config.json.
+            videoWallpaper = !videoWallpaper;
+            choices.edit().putBoolean(VIDEO_WALLPAPER_KEY, videoWallpaper).apply();
+            changed();
+            refresh();
+        });
         animationsChoice = findViewById(R.id.animationsChoice);
         animationsChoice.setOnClickListener(v -> {
             animations = !animations;
@@ -159,7 +172,7 @@ public final class LauncherSettingsActivity extends Activity {
         followThemeChoice.setOnClickListener(v -> {
             if (!hasOnTvChoices()) return;
             choices.edit().remove("columns").remove(Config.ROWS_BELOW_DOCK_KEY).remove("animations")
-                    .remove("advanced_effects").remove(Config.WALLPAPER_CHOICE_KEY)
+                    .remove("advanced_effects").remove(Config.WALLPAPER_CHOICE_KEY).remove(VIDEO_WALLPAPER_KEY)
                     .remove(Config.DOCK_OPACITY_KEY).remove(Config.CLOCK_FORMAT_KEY).remove(OpenOnStart.KEY).commit();
             Config current = Config.load(this);
             columns = current.columns;
@@ -308,6 +321,8 @@ public final class LauncherSettingsActivity extends Activity {
         for (int i = 0; i < clockChoices.length; i++) {
             clockChoices[i].setSelected(CLOCK_FORMATS[i].equals(clockFormat));
         }
+        videoWallpaperChoice.setText(getString(R.string.video_wallpaper_state,
+                getString(videoWallpaper ? R.string.on : R.string.off)));
         animationsChoice.setText(getString(R.string.animations_state,
                 getString(animations ? R.string.on : R.string.off)));
         advancedChoice.setText(getString(R.string.advanced_effects_state,

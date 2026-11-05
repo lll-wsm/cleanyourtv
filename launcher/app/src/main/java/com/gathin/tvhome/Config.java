@@ -688,6 +688,8 @@ final class Config {
         if (mounted) syncThemeChoices(choices, dir, file);
         int chosenColumns = choices.getInt("columns", columns);
         if (chosenColumns >= 4 && chosenColumns <= 12) columns = chosenColumns;
+        // The Launcher settings row, a preference rather than a theme key: last word over the theme's video_wallpaper.
+        videoWallpaper = choices.getBoolean("video_wallpaper", videoWallpaper);
         int chosenRows = choices.getInt(ROWS_BELOW_DOCK_KEY, rowsBelow);
         if (chosenRows >= 0 && chosenRows <= 3) rowsBelow = chosenRows;
         animations = choices.getBoolean("animations", animations);
