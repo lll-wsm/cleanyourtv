@@ -3,6 +3,7 @@ package com.gathin.tvhome;
 import android.app.Activity;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
+import android.graphics.drawable.GradientDrawable;
 import android.graphics.BitmapFactory;
 import android.media.MediaMetadataRetriever;
 import android.os.Bundle;
@@ -63,7 +64,9 @@ public class WallpaperPickerActivity extends Activity {
         grid.setLayoutManager(new GridLayoutManager(this, 5));
         grid.setPadding(dp(24), dp(72), dp(24), dp(24));
         grid.setClipToPadding(false);
-        grid.setAdapter(new Adapter(files, videos));
+        String current = getSharedPreferences(Config.SETTINGS_NAME, MODE_PRIVATE)
+                .getString(videos ? "video_choice" : Config.WALLPAPER_CHOICE_KEY, null);
+        grid.setAdapter(new Adapter(files, videos, current));
         root.addView(grid, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
@@ -84,6 +87,19 @@ public class WallpaperPickerActivity extends Activity {
         super.onDestroy();
         decoder.shutdownNow();
         thumbs.evictAll();
+    }
+
+    /** Cell background: the pick on the wallpaper now wears an amber ring, focus a white one. */
+    private GradientDrawable cellBackground(boolean current, boolean focused) {
+        GradientDrawable background = new GradientDrawable();
+        background.setColor(0xFF16161A);
+        if (current) {
+            background.setStroke(dp(focused ? 4 : 3), 0xFFFFB300);
+        } else if (focused) {
+            background.setStroke(dp(3), 0xFFFFFFFF);
+        }
+        background.setCornerRadius(dp(6));
+        return background;
     }
 
     private int dp(int value) {
@@ -113,10 +129,13 @@ public class WallpaperPickerActivity extends Activity {
     private final class Adapter extends RecyclerView.Adapter<Holder> {
         private final List<File> files;
         private final boolean videos;
+        /** Name of the file on the wallpaper now, so the grid can mark it. */
+        private final String current;
 
-        Adapter(List<File> files, boolean videos) {
+        Adapter(List<File> files, boolean videos, String current) {
             this.files = new ArrayList<>(files);
             this.videos = videos;
+            this.current = current;
         }
 
         @Override
@@ -127,7 +146,7 @@ public class WallpaperPickerActivity extends Activity {
             cell.setPadding(dp(8), dp(8), dp(8), dp(8));
             cell.setFocusable(true);
             cell.setClickable(true);
-            cell.setBackgroundColor(0xFF16161A);
+            cell.setBackground(cellBackground(false, false));
 
             ImageView image = new ImageView(WallpaperPickerActivity.this);
             image.setScaleType(ImageView.ScaleType.CENTER_CROP);
@@ -143,13 +162,19 @@ public class WallpaperPickerActivity extends Activity {
             name.setBackgroundColor(0x99000000);
             cell.addView(name, new FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM));
-            return new Holder(cell, image, name);
+            Holder holder = new Holder(cell, image, name);
+            cell.setOnFocusChangeListener((v, focused) ->
+                    v.setBackground(cellBackground(holder.current, focused)));
+            return holder;
         }
 
         @Override
         public void onBindViewHolder(Holder holder, int position) {
             File file = files.get(position);
-            holder.name.setText(file.getName().replaceFirst("\\.[^.]+$", ""));
+            String label = file.getName().replaceFirst("\\.[^.]+$", "");
+            holder.current = file.getName().equals(current);
+            holder.name.setText(holder.current ? "✓ " + label : label);
+            holder.itemView.setBackground(cellBackground(holder.current, holder.itemView.isFocused()));
             holder.image.setImageBitmap(null);
             Bitmap cached = thumbs.get(file.getAbsolutePath());
             if (cached == null) cached = ThumbCache.load(WallpaperPickerActivity.this, file);
@@ -168,6 +193,12 @@ public class WallpaperPickerActivity extends Activity {
                     });
                 });
             }
+            if (cached == null && holder.image.getDrawable() == null) {
+                // Nothing to show yet: a grey placeholder reads as "still coming", not as a black picture.
+                holder.image.setBackgroundColor(0xFF232329);
+            } else {
+                holder.image.setBackground(null);
+            }
             holder.itemView.setOnClickListener(v -> pick(file, videos));
         }
 
@@ -180,6 +211,7 @@ public class WallpaperPickerActivity extends Activity {
     private static final class Holder extends RecyclerView.ViewHolder {
         final ImageView image;
         final TextView name;
+        boolean current;
 
         Holder(View item, ImageView image, TextView name) {
             super(item);

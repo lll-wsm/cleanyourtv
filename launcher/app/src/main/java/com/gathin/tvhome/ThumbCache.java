@@ -41,7 +41,7 @@ final class ThumbCache {
     }
 
     static File fileFor(Context context, File source) {
-        return new File(context.getExternalFilesDir(null), "thumb-" + source.getName() + ".jpg");
+        return new File(context.getExternalFilesDir(null), "thumb2-" + source.getName() + ".jpg");
     }
 
     /** The stored thumbnail, or null when there is none or it is older than the file it was made from. */
@@ -116,13 +116,15 @@ final class ThumbCache {
             } catch (Exception ignored) {
             }
             long micros = duration * 1000L;
+            // Exact frames, not the nearest keyframe: a short film's only keyframe is the black one at zero, so a
+            // keyframe seek answers with black whatever time is asked for.
             long[] points = micros > 0
-                    ? new long[]{(long) (micros * 0.10), (long) (micros * 0.45), (long) (micros * 0.80)}
-                    : new long[]{0, 1_000_000, 2_000_000};
+                    ? new long[]{(long) (micros * 0.35), (long) (micros * 0.65)}
+                    : new long[]{1_000_000, 2_000_000};
             Bitmap best = null;
             int bestLuma = -1;
             for (long at : points) {
-                Bitmap candidate = retriever.getFrameAtTime(at, MediaMetadataRetriever.OPTION_CLOSEST_SYNC);
+                Bitmap candidate = retriever.getFrameAtTime(at, MediaMetadataRetriever.OPTION_CLOSEST);
                 if (candidate == null) continue;
                 int luma = luma(candidate);
                 if (luma > bestLuma) {
