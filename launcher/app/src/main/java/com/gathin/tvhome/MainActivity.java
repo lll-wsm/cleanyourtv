@@ -147,6 +147,29 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
      * Shows the current wallpaper (or the film's thumbnail) for the moment a rebuild takes, so a settings change
      * does not flash black on the way back to Home. The players clear it as soon as they have something to draw.
      */
+    /** Set once the grid's padding matches the measured height, so only the first correction is hidden. */
+    private boolean paddingSettled;
+
+    /** Top padding that parks the dock near the bottom: shared by the pre-layout guess and the layout listener. */
+    private int gridPaddingTop(Config cfg, int h, int width) {
+        int rowsBelowDock = cfg.rowsBelowDock;
+        int inner = width - grid.getPaddingLeft() - grid.getPaddingRight();
+        int tileW = AppAdapter.tileWidthPx(inner, h, COLUMNS, rowsBelowDock, cfg.dockTitle, cfg.dockRow, density);
+        int itemH = AppAdapter.itemHeightPx(AppAdapter.tileHeightPx(tileW), density);
+        int dockRow = itemH + (int) (AppAdapter.DOCK_EXTRA_DP * density);   // item height plus DockDecoration offsets
+        int gridRows = itemH * rowsBelowDock;
+        int shelfClearance = cfg.appLibrary ? hero.getMeasuredHeight() + (int) (40 * density) : 0;
+        int want = Math.max(shelfClearance, h - dockRow - gridRows - (int) (cfg.dockBottomRoom * density));
+        if (this.dockRow && cfg.dockTitle && rowsBelowDock > 0) want = Math.max(want, (int) (AppAdapter.TITLE_ROOM_DP * density));
+        if (!this.dockRow) want = (int) (AppAdapter.TOP_ROOM_DP * density);
+        if (singleRow && !cfg.alwaysShowNames) want += (int) (29 * density);
+        // The floors above assume the dock fits; with the app library on, shelfClearance is the hero's height and can
+        // exceed the space left for the rows, which pushed the dock row off the bottom of the screen. Clamp the
+        // padding to what leaves the last row on screen, or the tray is lost to the user.
+        int maxTop = h - dockRow - gridRows - (int) (cfg.dockBottomRoom * density);
+        return Math.max(0, Math.min(want, Math.max(0, maxTop)));
+    }
+
     private void showOpeningFrame(Config cfg) {
         try {
             File source = null;
@@ -756,32 +779,31 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         adapter.setSavedOrder(Order.ranks(savedOrder, dockApps), Order.docked(savedOrder, dockApps));
         grid.setAdapter(adapter);
 
+        // The same padding the layout listener below computes, worked out before the first layout from the screen
+        // size. Without it the first frame sits at padding 0 and the rows jump down once the real height is known,
+        // which reads as the whole grid sliding into place after a rebuild.
+        int screenHeight = getResources().getDisplayMetrics().heightPixels;
+        int screenWidth = getResources().getDisplayMetrics().widthPixels;
+        grid.setPadding(grid.getPaddingLeft(), gridPaddingTop(cfg, screenHeight, screenWidth),
+                grid.getPaddingRight(), grid.getPaddingBottom());
+        // Safety net: the rows stay hidden while the padding settles, but never longer than half a second, or a
+        // padding that refuses to converge would leave Home without icons.
+        grid.postDelayed(() -> grid.setVisibility(View.VISIBLE), 500);
+
         // tvOS layout: push the dock row towards the bottom of the screen, leaving room for
         // rows_below_dock grid rows under it; the rest of the grid stays below until you press Down.
         int rowsBelowDock = cfg.rowsBelowDock;
         grid.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> {
             int h = b - t;
-            // Item height follows the tile size, which follows the columns and the rows that must fit (AppAdapter.tileWidthPx).
-            int inner = (r - l) - grid.getPaddingLeft() - grid.getPaddingRight();
-            int tileW = AppAdapter.tileWidthPx(inner, h, COLUMNS, rowsBelowDock, cfg.dockTitle, cfg.dockRow, density);
-            int itemH = AppAdapter.itemHeightPx(AppAdapter.tileHeightPx(tileW), density);
-            int dockRow = itemH + (int) (AppAdapter.DOCK_EXTRA_DP * density);   // item height plus DockDecoration offsets
-            int gridRows = itemH * rowsBelowDock;
-            // Keep the hero below the header when the library is enabled on a short screen,
-            // even when the theme requests an extra visible row below the dock.
-            int shelfClearance = cfg.appLibrary ? hero.getMeasuredHeight() + (int) (40 * density) : 0;
-            // dock_bottom_room: less room under the last row parks the dock lower on the screen.
-            int want = Math.max(shelfClearance, h - dockRow - gridRows - (int) (cfg.dockBottomRoom * density));
-            // Where the rows cannot fit even at the smallest tile (3 rows with the title on), the title keeps its
-            // room above the dock and the last rows run off the bottom instead of the title drawing over the clock.
-            if (MainActivity.this.dockRow && cfg.dockTitle && rowsBelowDock > 0) want = Math.max(want, (int) (AppAdapter.TITLE_ROOM_DP * density));
-            // No dock to push down: the grid starts at the top, with room for the first row's zoom and glass.
-            if (!MainActivity.this.dockRow) want = (int) (AppAdapter.TOP_ROOM_DP * density);
-            // A single row never shows the names under its tiles (the title above the row names the app), so the
-            // 7dp gap and 22dp label item_app.xml keeps for them would only lift the row: sit it that much lower.
-            if (singleRow && !cfg.alwaysShowNames) want += (int) (29 * density);
+            int want = gridPaddingTop(cfg, h, r - l);
             if (grid.getPaddingTop() != want) {
+                // Corrections land after a layout, so the rows would be seen travelling to their place (the "sliding
+                // in from the top" after a wallpaper change). Stay out of sight until a pass agrees with what is set.
+                grid.setVisibility(View.INVISIBLE);
                 grid.setPadding(grid.getPaddingLeft(), want, grid.getPaddingRight(), grid.getPaddingBottom());
+            } else if (!paddingSettled) {
+                paddingSettled = true;
+                grid.setVisibility(View.VISIBLE);
                 // A vertical grid parks the dock on the new padding line by scrolling (onTileFocused); a sideways
                 // row cannot scroll vertically, and the layout request made from inside this layout pass is
                 // dropped, so lay the row out again on the next frame. The glass and the title were placed for the
