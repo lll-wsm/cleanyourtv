@@ -510,6 +510,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         // the theme's background, so launch looks the same.
         getWindow().setBackgroundDrawable(null);
         wallpaperPlayer = new WallpaperPlayer(this, root, cfg);
+        SystemSettings.vendorFirst = cfg.settingsVendorFirst;
         videoWallpaper = cfg.videoWallpaper ? new VideoWallpaperPlayer(this, root, cfg.videoWallpaperDim) : null;
         if (videoWallpaper != null) {
             // A clip the TV cannot decode (4K60 on this class of decoder) hands Home back to the backdrop and the
@@ -724,7 +725,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             // Keep the hero below the header when the library is enabled on a short screen,
             // even when the theme requests an extra visible row below the dock.
             int shelfClearance = cfg.appLibrary ? hero.getMeasuredHeight() + (int) (40 * density) : 0;
-            int want = Math.max(shelfClearance, h - dockRow - gridRows - (int) (AppAdapter.BOTTOM_ROOM_DP * density));
+            // dock_bottom_room: less room under the last row parks the dock lower on the screen.
+            int want = Math.max(shelfClearance, h - dockRow - gridRows - (int) (cfg.dockBottomRoom * density));
             // Where the rows cannot fit even at the smallest tile (3 rows with the title on), the title keeps its
             // room above the dock and the last rows run off the bottom instead of the title drawing over the clock.
             if (MainActivity.this.dockRow && cfg.dockTitle && rowsBelowDock > 0) want = Math.max(want, (int) (AppAdapter.TITLE_ROOM_DP * density));

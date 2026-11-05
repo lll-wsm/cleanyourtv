@@ -14,9 +14,19 @@ import android.provider.Settings;
 final class SystemSettings {
     private SystemSettings() {}
 
+    /** settings_vendor_first: true makes the standard settings actions open the vendor's own settings app.
+     *  Set once by MainActivity from the config; false keeps the stock behaviour. */
+    static boolean vendorFirst;
+
     static Intent intent(Context context, String action) {
         PackageManager pm = context.getPackageManager();
         Intent standard = new Intent(action);
+        // A China-market TV answers the standard action with its AOSP TV settings, where Xiaomi's Account &
+        // Security (the ADB switch) has no page; the theme can ask for the vendor app instead.
+        if (vendorFirst) {
+            Intent preferred = vendorIntent(context);
+            if (preferred != null) return preferred;
+        }
         ResolveInfo resolved = pm.resolveActivity(standard, PackageManager.MATCH_DEFAULT_ONLY);
         // Fire OS resolves the standard actions to a CTS compliance stub that opens nothing;
         // treat it as missing so the vendor fallback runs.
