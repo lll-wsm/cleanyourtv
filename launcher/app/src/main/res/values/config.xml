@@ -374,6 +374,12 @@
          pictures in wallpapers/ ("01-dusk.jpg<TAB>Dusk over the peaks", one per line). A picture without a line
          shows no name. Can also be set with "wallpaper_captions": true in a theme's config.json. -->
     <bool name="wallpaper_captions">false</bool>
+    <!-- A video behind Home instead of the picture collection: the first .mp4 in
+         Android/data/<package>/files/videos/, silent, looping, released whenever Home is not in front so the
+         TV's one or two hardware decoders stay free for the app the viewer opens. Off by default; a theme turns
+         it on with "video_wallpaper": true in its config.json. Falls back to the pictures when the folder is
+         empty or the file will not play. -->
+    <bool name="video_wallpaper">false</bool>
     <!-- Rotating wallpapers grouped by the time of day, as JSON: {"morning": [file names], "evening": [...],
          "night": [...]}. While set, the rotation picks only from the group that fits now: morning from sunrise to
          noon, evening until half an hour after sunset, night the rest, with the sun at latitude and longitude (07:00

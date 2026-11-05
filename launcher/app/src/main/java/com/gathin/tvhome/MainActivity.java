@@ -144,6 +144,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private RecyclerView grid;
     private FrameLayout root;
     private WallpaperPlayer wallpaperPlayer;
+    /** Null while the theme keeps video_wallpaper off, or when the folder has no film to play. */
+    private VideoWallpaperPlayer videoWallpaper;
+    /** True while the film is actually on screen, so the minute tick leaves the picture rotation alone. */
+    private boolean videoPlaying;
     private GlassView glass;
     private View ambient;
     private TextView heroName;
@@ -441,7 +445,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             // signal level, so only it needs this minute's binder calls (about 7 ms on the UI thread).
             if (festive) updateWifiLabel();
             sky.update();
-            wallpaperPlayer.update();
+            if (!videoPlaying) wallpaperPlayer.update();
             handler.postDelayed(this, MINUTE_MS);
         }
     };
@@ -506,6 +510,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         // the theme's background, so launch looks the same.
         getWindow().setBackgroundDrawable(null);
         wallpaperPlayer = new WallpaperPlayer(this, root, cfg);
+        videoWallpaper = cfg.videoWallpaper ? new VideoWallpaperPlayer(this, root) : null;
         sky = findViewById(R.id.sky);
         sky.setIntensity(cfg.skyIntensity);
         glass = findViewById(R.id.glass);
@@ -1131,7 +1136,16 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (showStats) startStats();
         if (gameDay != null) gameDay.start();
         sky.update();
-        wallpaperPlayer.start();
+        // A film takes the pictures' place while it plays; an empty folder or an unplayable file hands Home back
+        // to the rotation instead of leaving a black screen. The time-of-day backdrop is opaque and sits in the
+        // window, over the video's surface, so it steps aside for the film.
+        videoPlaying = videoWallpaper != null && videoWallpaper.start();
+        if (videoPlaying) {
+            sky.setVisibility(View.GONE);
+        } else {
+            sky.setVisibility(View.VISIBLE);
+            wallpaperPlayer.start();
+        }
         handler.postDelayed(minuteTick, MINUTE_MS);
         if (festive && lamp != null) {
             lamp.start();
@@ -1305,6 +1319,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         cancelHoldOk();
         root.removeCallbacks(showIdleClock);
         endReorder();   // Home or another app while reordering keeps the order so far
+        // The decoder goes first: the app the viewer opens next must find the TV's hardware decoders free.
+        if (videoWallpaper != null) {
+            videoWallpaper.stop();
+            videoPlaying = false;
+        }
+        sky.setVisibility(View.VISIBLE);
         wallpaperPlayer.stop();
         stopAmbientAnimation();
         hero.animate().cancel();
@@ -1354,6 +1374,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         heroArtCache.clear();
         heroArtKey = null;
         wallpaperPlayer.releaseForMemoryPressure();
+        if (videoWallpaper != null) videoWallpaper.releaseForMemoryPressure();
         tileRefresh.invalidate();
     }
 
@@ -1378,6 +1399,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         unregisterReceiver(packageReceiver);
         if (openOnStartOnWake) unregisterReceiver(wakeReceiver);
         wallpaperPlayer.close();
+        if (videoWallpaper != null) videoWallpaper.close();
         ConnectivityManager cm = getSystemService(ConnectivityManager.class);
         TvInputManager tim = (TvInputManager) getSystemService(TV_INPUT_SERVICE);
         if (tim != null) tim.unregisterCallback(inputCallback);

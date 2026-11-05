@@ -222,6 +222,8 @@ final class Config {
     final boolean cinematicHome;
     /** The glow in the focused app's colour behind the dock (config.xml, ambient_glow); false keeps the background plain. */
     final boolean ambientGlow;
+    /** A video behind Home instead of the pictures (config.xml, video_wallpaper); off falls back to them. */
+    final boolean videoWallpaper;
     /** The focus highlight in the focused app's colour on every tile (config.xml, app_glow), as cinematic_home does for the dock. */
     final boolean appGlow;
     /** The rows fade out under the clock instead of being cut off (config.xml, fade_rows); TopFade. */
@@ -292,7 +294,8 @@ final class Config {
                    boolean keyFilter, boolean dockGlass, String glowStyle, boolean wallpaperCaptions,
                    boolean handleViewInputs, boolean tileMenu, boolean dockEvenPadding, boolean dockBand, boolean cinematicDots, boolean cinematicWhiteFocus, boolean wifiStatusColor, int cinematicScrim, int cinematicArt,
                    Map<String, Set<String>> wallpaperMoods, boolean gamepadPassthrough, boolean consumeVolumeKeys, boolean powerOnHome, boolean homeLongPressHome, boolean wifiStatusWarnings, List<String> topBarApps, boolean showGreeting, boolean headerWhite, boolean clockWallpaper, int clockWallpaperDim, boolean clockGlow, String glassStyle, boolean singleRow, boolean dockBandAll, boolean lunarDate, int lunarUtcOffset, boolean dateBelowClock, boolean vpnPill, String locale, boolean powerOnHomeAlways, boolean inputsConnectedOnly, boolean inputsCecStateOnly,
-                   int openOnStartNetworkWait, boolean openOnStartOnWake, boolean iconOnlyVpn, String clockFormat, boolean backOpensClock, boolean glowSnap) {
+                   int openOnStartNetworkWait, boolean openOnStartOnWake, boolean iconOnlyVpn, String clockFormat, boolean backOpensClock, boolean glowSnap,
+                   boolean videoWallpaper) {
         this.handleViewInputs = handleViewInputs;
         this.tileMenu = tileMenu;
         this.inputKeycodes = inputKeycodes;
@@ -375,6 +378,7 @@ final class Config {
         this.raceCalendar = Collections.unmodifiableList(raceCalendar);
         this.cinematicHome = cinematicHome;
         this.ambientGlow = ambientGlow;
+        this.videoWallpaper = videoWallpaper;
         this.appGlow = appGlow;
         this.fadeRows = fadeRows;
         this.homeIdleClockMinutes = homeIdleClockMinutes;
@@ -502,6 +506,7 @@ final class Config {
         String stockHomeRedirect = res.getString(R.string.stock_home_redirect).trim();
         boolean cinematic = res.getBoolean(R.bool.cinematic_home);
         boolean ambientGlow = res.getBoolean(R.bool.ambient_glow);
+        boolean videoWallpaper = res.getBoolean(R.bool.video_wallpaper);
         boolean appGlow = res.getBoolean(R.bool.app_glow);
         boolean fadeRows = res.getBoolean(R.bool.fade_rows);
         int idleClockMinutes = res.getInteger(R.integer.home_idle_clock_minutes);
@@ -616,6 +621,7 @@ final class Config {
             stockHomeRedirect = string(json, "stock_home_redirect", stockHomeRedirect);
             cinematic = bool(json, "cinematic_home", cinematic);
             ambientGlow = bool(json, "ambient_glow", ambientGlow);
+            videoWallpaper = bool(json, "video_wallpaper", videoWallpaper);
             appGlow = bool(json, "app_glow", appGlow);
             fadeRows = bool(json, "fade_rows", fadeRows);
             idleClockMinutes = integer(json, "home_idle_clock_minutes", idleClockMinutes, 0, 1440);
@@ -715,7 +721,8 @@ final class Config {
                 consumeVolumeKeys, powerOnHome, homeLongPressHome, wifiStatusWarnings, topBarApps, showGreeting, headerWhite, clockWallpaper,
                 Math.max(0, Math.min(90, clockWallpaperDim)), clockGlow, glassStyle, singleRow && dockRow, dockBandAll, lunar, lunarOffset,
                 dateBelowClock, vpnPill, locale, powerOnHomeAlways, inputsConnectedOnly, inputsCecStateOnly,
-                Math.max(0, Math.min(600, openOnStartNetworkWait)), openOnStartOnWake, iconOnlyVpn, clockFormat, backOpensClock, glowSnap);
+                Math.max(0, Math.min(600, openOnStartNetworkWait)), openOnStartOnWake, iconOnlyVpn, clockFormat, backOpensClock, glowSnap,
+                videoWallpaper);
     }
 
     /**

@@ -91,7 +91,10 @@ final class WallpaperPlayer {
         names = config.wallpaperCaptions && config.wallpaperEnabled && !files.isEmpty()
                 ? WallpaperCaptions.read(files.get(0).getParentFile()) : Collections.emptyMap();
         caption = names.isEmpty() ? null : makeCaption(context, root);
-        if (config.wallpaperEnabled && !files.isEmpty()) {
+        // A film behind Home takes the pictures' place: a picture layer would cover the video's surface, which is
+        // composited behind the window rather than drawn in it.
+        boolean videoInstead = config.videoWallpaper && VideoWallpaperPlayer.hasVideo(context);
+        if (!videoInstead && config.wallpaperEnabled && !files.isEmpty()) {
             root.addView(image, 0, new FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
             showFirst();
