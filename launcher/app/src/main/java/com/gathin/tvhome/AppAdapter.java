@@ -98,6 +98,8 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     }
 
     static final float FOCUS_SCALE = 1.10f;
+    /** tile_shape "square" (theme): 1:1 tiles with a macOS-like corner, the icon alone in them. */
+    static boolean squareTiles;
     /** Design size of a tile (dp); tiles shrink from here when the columns don't fit, see tileWidthPx. */
     static final float DESIGN_W_DP = 180f, DESIGN_H_DP = 101f;
 
@@ -114,6 +116,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     }
 
     static int tileHeightPx(int tileWidthPx) {
+        if (squareTiles) return tileWidthPx;
         return Math.round(tileWidthPx * DESIGN_H_DP / DESIGN_W_DP);
     }
 
@@ -301,6 +304,8 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             if (!(uniformTiles && card == null)) {
                 banner = bundledBanner(appBanners.get(pkg));
                 if (banner == null) banner = iconTiles.contains(pkg) ? iconBanner(ri.loadIcon(pm)) : loadBanner(pm, ri);
+                // Square tiles are the icon alone: a 16:9 banner centre-cropped into a square is not the macOS look.
+                if (squareTiles) banner = null;
             }
             // The icon is only drawn (and sampled for the glow) when there is no banner, so a tile with a
             // banner skips loading and decoding it.
@@ -506,7 +511,31 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             h.icon.setImageDrawable(e.icon);
             h.icon.setVisibility(View.VISIBLE);
             h.label.setText(e.label);
-            h.label.setVisibility(uniformTiles ? View.GONE : View.VISIBLE);
+            h.label.setVisibility(uniformTiles && !squareTiles ? View.GONE : View.VISIBLE);
+            if (squareTiles) {
+                // The icon alone, at the size macOS gives an app in the dock, on one rounded card.
+                float density = h.card.getResources().getDisplayMetrics().density;
+                int side = h.card.getLayoutParams().width;
+                ViewGroup.LayoutParams ilp = h.icon.getLayoutParams();
+                int iconSide = Math.round(side * 0.86f);
+                ilp.width = iconSide;
+                ilp.height = iconSide;
+                if (ilp instanceof ViewGroup.MarginLayoutParams) {
+                    ((ViewGroup.MarginLayoutParams) ilp).bottomMargin = 0;
+                }
+                h.icon.setLayoutParams(ilp);
+                h.label.setVisibility(View.GONE);
+                // macOS has no card: the app's own icon, rounded like an app icon, is the tile.
+                h.card.setBackground(null);
+                h.icon.setClipToOutline(true);
+                final int iconCorner = Math.round(iconSide * 0.22f);
+                h.icon.setOutlineProvider(new ViewOutlineProvider() {
+                    @Override
+                    public void getOutline(View v, android.graphics.Outline outline) {
+                        outline.setRoundRect(0, 0, v.getWidth(), v.getHeight(), iconCorner);
+                    }
+                });
+            }
         }
         h.card.setOnClickListener(v -> launch(e));
         h.card.setOnLongClickListener(v -> {
@@ -896,6 +925,8 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
     /** Corner radius for a tile of this width: 16dp at the design width, proportionally less when smaller. */
     static float cornerRadius(int tileWidthPx, float density) {
+        // Square tiles take the icon-like corner (22% of the side, as a squircle app icon is); banners keep 16dp.
+        if (squareTiles) return tileWidthPx * 0.22f;
         return 16f * density * Math.min(1f, tileWidthPx / (DESIGN_W_DP * density));
     }
 

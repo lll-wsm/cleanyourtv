@@ -511,6 +511,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         getWindow().setBackgroundDrawable(null);
         wallpaperPlayer = new WallpaperPlayer(this, root, cfg);
         SystemSettings.vendorFirst = cfg.settingsVendorFirst;
+        AppAdapter.squareTiles = "square".equals(cfg.tileShape);
         videoWallpaper = cfg.videoWallpaper ? new VideoWallpaperPlayer(this, root, cfg.videoWallpaperDim) : null;
         if (videoWallpaper != null) {
             // A clip the TV cannot decode (4K60 on this class of decoder) hands Home back to the backdrop and the
