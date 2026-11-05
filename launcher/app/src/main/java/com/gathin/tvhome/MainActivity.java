@@ -143,6 +143,39 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private AppAdapter adapter;
     private RecyclerView grid;
     private FrameLayout root;
+    /**
+     * Shows the current wallpaper (or the film's thumbnail) for the moment a rebuild takes, so a settings change
+     * does not flash black on the way back to Home. The players clear it as soon as they have something to draw.
+     */
+    private void showOpeningFrame(Config cfg) {
+        try {
+            File source = null;
+            if (cfg.videoWallpaper) {
+                List<File> films = VideoWallpaperPlayer.videos(this);
+                for (File film : films) {
+                    if (cfg.videoChoice != null && film.getName().equals(cfg.videoChoice)) source = film;
+                }
+                if (source == null && !films.isEmpty()) source = films.get(0);
+            } else {
+                List<File> pictures = WallpaperRotation.images(new File(getExternalFilesDir(null), "wallpapers"));
+                String choice = getSharedPreferences(Config.SETTINGS_NAME, MODE_PRIVATE)
+                        .getString(Config.WALLPAPER_CHOICE_KEY, null);
+                for (File picture : pictures) {
+                    if (picture.getName().equals(choice)) source = picture;
+                }
+                if (source == null && !pictures.isEmpty()) source = pictures.get(0);
+            }
+            if (source == null) return;
+            Bitmap frame = ThumbCache.load(this, source);
+            if (frame == null) frame = ThumbCache.make(this, source, cfg.videoWallpaper);
+            if (frame != null) root.setBackground(new BitmapDrawable(getResources(), frame));
+        } catch (Exception ignored) {
+            // A missing opening frame is only a cosmetic loss: the players draw over it a moment later.
+        }
+    }
+
+    /** The config this activity was built with; onResume needs it for the opening frame. */
+    private Config activeConfig;
     private WallpaperPlayer wallpaperPlayer;
     /** Null while the theme keeps video_wallpaper off, or when the folder has no film to play. */
     private VideoWallpaperPlayer videoWallpaper;
@@ -462,6 +495,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         density = getResources().getDisplayMetrics().density;
         // config.xml, overlaid by config.json from a pushed theme (see Config and tools/theme.sh).
         Config cfg = Config.load(this);
+        activeConfig = cfg;
         homeAppKeys = RemoteKeys.parseAppKeys(cfg.appKeys);
         clockFormat = cfg.clockFormat;
         ClockFormat.apply(getWindow().getDecorView(), clockFormat);
@@ -1171,6 +1205,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             // pass waits for onPause, where the decoder is free too.
             ThumbCache.ensure(this);
         }
+        // The players decode on a worker thread, so for a moment Home is drawn on its plain background colour and a
+        // rebuild after a settings change reads as a black screen. Put the wallpaper that is about to be drawn up now;
+        // the players paint over it as soon as they have the real thing.
+        if (activeConfig != null) showOpeningFrame(activeConfig);
         handler.postDelayed(minuteTick, MINUTE_MS);
         if (festive && lamp != null) {
             lamp.start();
