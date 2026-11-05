@@ -152,6 +152,7 @@ public class WallpaperPickerActivity extends Activity {
             holder.name.setText(file.getName().replaceFirst("\\.[^.]+$", ""));
             holder.image.setImageBitmap(null);
             Bitmap cached = thumbs.get(file.getAbsolutePath());
+            if (cached == null && videos) cached = cachedThumb(file);
             if (cached != null) {
                 holder.image.setImageBitmap(cached);
             } else {
@@ -160,6 +161,7 @@ public class WallpaperPickerActivity extends Activity {
                     Bitmap bitmap = thumbnail(file, videos);
                     if (bitmap == null) return;
                     thumbs.put(file.getAbsolutePath(), bitmap);
+                    if (videos) storeThumb(file, bitmap);
                     main.post(() -> {
                         if (file.getAbsolutePath().equals(holder.image.getTag())) {
                             holder.image.setImageBitmap(bitmap);
@@ -192,15 +194,81 @@ public class WallpaperPickerActivity extends Activity {
             MediaMetadataRetriever retriever = new MediaMetadataRetriever();
             try {
                 retriever.setDataSource(file.getAbsolutePath());
-                // Two seconds in: a frame at zero is often mid-fade and comes out black.
-                Bitmap frame = retriever.getFrameAtTime(2_000_000);
-                if (frame == null) frame = retriever.getFrameAtTime(0);
-                return frame;
+                long duration = 0;
+                try {
+                    duration = Long.parseLong(retriever.extractMetadata(
+                            MediaMetadataRetriever.METADATA_KEY_DURATION));
+                } catch (Exception ignored) {
+                }
+                // Three points along the film and the brightest wins. One frame is often black for a reason that
+                // is in the clip itself: a fade-in at the start, and on a short clip every seek lands on the same
+                // keyframe, which is the black one at zero.
+                long micros = duration * 1000L;
+                long[] points = micros > 0
+                        ? new long[]{(long) (micros * 0.10), (long) (micros * 0.45), (long) (micros * 0.80)}
+                        : new long[]{0, 1_000_000, 2_000_000};
+                Bitmap best = null;
+                int bestLuma = -1;
+                for (long at : points) {
+                    Bitmap frame = retriever.getFrameAtTime(at, MediaMetadataRetriever.OPTION_CLOSEST_SYNC);
+                    if (frame == null) continue;
+                    int luma = luma(frame);
+                    if (luma > bestLuma) {
+                        if (best != null) best.recycle();
+                        best = frame;
+                        bestLuma = luma;
+                    } else {
+                        frame.recycle();
+                    }
+                }
+                return best;
             } finally {
                 retriever.release();
             }
         } catch (Exception e) {
             return null;
+        }
+    }
+
+    /** Mean brightness of a frame, sampled on a coarse grid: enough to tell a black frame from a picture. */
+    private static int luma(Bitmap frame) {
+        int total = 0;
+        int count = 0;
+        for (int y = 0; y < 9; y++) {
+            int py = Math.min(frame.getHeight() - 1, frame.getHeight() * y / 9);
+            for (int x = 0; x < 16; x++) {
+                int px = Math.min(frame.getWidth() - 1, frame.getWidth() * x / 16);
+                int colour = frame.getPixel(px, py);
+                total += (((colour >> 16) & 0xFF) + ((colour >> 8) & 0xFF) + (colour & 0xFF)) / 3;
+                count++;
+            }
+        }
+        return count == 0 ? 0 : total / count;
+    }
+
+    /** The thumbnails kept between openings, named after the film and stamped with its mtime.
+     *
+     *  <p>They sit in the package's files root rather than a folder of their own on purpose: a folder the app
+     *  creates is owned by the app, and {@code adb push} cannot write into it (the TV's FUSE refuses the chown), so
+     *  a cache that can be seeded over ADB has to live one level up, where the shell already owns the directory. */
+    private File thumbFile(File film) {
+        return new File(getExternalFilesDir(null), "thumb-" + film.getName() + ".jpg");
+    }
+
+    private Bitmap cachedThumb(File film) {
+        File file = thumbFile(film);
+        if (file == null || !file.isFile() || file.length() == 0) return null;
+        // A re-encoded film has a newer timestamp than its thumbnail: decode again rather than show the old one.
+        if (file.lastModified() < film.lastModified()) return null;
+        return BitmapFactory.decodeFile(file.getAbsolutePath());
+    }
+
+    private void storeThumb(File film, Bitmap bitmap) {
+        File file = thumbFile(film);
+        if (file == null) return;
+        try (java.io.FileOutputStream stream = new java.io.FileOutputStream(file)) {
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 85, stream);
+        } catch (Exception ignored) {
         }
     }
 
