@@ -33,7 +33,7 @@ public final class LauncherSettingsActivity extends Activity {
     private static final int[] COLUMN_VALUES = {4, 5, 6, 7, 8, 10, 12};
     private final TextView[] columnChoices = new TextView[COLUMN_VALUES.length];
     private final TextView[] rowChoices = new TextView[4];
-    private static final int[] DOCK_OPACITIES = {100, 70, 50, 30};
+    private static final int[] DOCK_OPACITIES = {100, 70, 50, 30, 0};
     private final TextView[] dockChoices = new TextView[DOCK_OPACITIES.length];
     private static final String[] CLOCK_FORMATS = {"system", "12", "24"};
     private final TextView[] clockChoices = new TextView[CLOCK_FORMATS.length];
@@ -100,7 +100,7 @@ public final class LauncherSettingsActivity extends Activity {
                 refresh();
             });
         }
-        int[] dockIds = {R.id.dock100, R.id.dock70, R.id.dock50, R.id.dock30};
+        int[] dockIds = {R.id.dock100, R.id.dock70, R.id.dock50, R.id.dock30, R.id.dock0};
         for (int i = 0; i < dockIds.length; i++) {
             final int value = DOCK_OPACITIES[i];
             dockChoices[i] = findViewById(dockIds[i]);

@@ -89,6 +89,7 @@
             <TextView android:id="@+id/dock70" style="@style/SettingsColumnChoice" android:text="70%" />
             <TextView android:id="@+id/dock50" style="@style/SettingsColumnChoice" android:text="50%" />
             <TextView android:id="@+id/dock30" style="@style/SettingsColumnChoice" android:text="30%" />
+            <TextView android:id="@+id/dock0" style="@style/SettingsColumnChoice" android:text="0%" />
         </LinearLayout>
 
         <TextView

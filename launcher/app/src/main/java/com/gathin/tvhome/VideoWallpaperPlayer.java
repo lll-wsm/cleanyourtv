@@ -2,6 +2,7 @@ package com.gathin.tvhome;
 
 import android.content.Context;
 import android.graphics.SurfaceTexture;
+import android.graphics.Bitmap;
 import android.media.MediaPlayer;
 import android.util.Log;
 import android.view.Gravity;
@@ -35,6 +36,7 @@ final class VideoWallpaperPlayer {
     private static final String FOLDER = "videos";
     private static final String EXTENSION = ".mp4";
 
+    private final android.content.Context context;
     private final FrameLayout root;
     private final TextureView view;
     private final View shade;
@@ -52,6 +54,7 @@ final class VideoWallpaperPlayer {
     private boolean failed;
 
     VideoWallpaperPlayer(Context context, FrameLayout root, int dim, List<File> films) {
+        this.context = context;
         this.root = root;
         this.dim = Math.max(0, Math.min(90, dim));
         this.files = films;
@@ -129,6 +132,14 @@ final class VideoWallpaperPlayer {
         release();
         view.setVisibility(View.GONE);
         shade.setVisibility(View.GONE);
+        // A still of the film while Home is in the back: a settings panel over Home draws it behind the panel, and
+        // an empty TextureView there reads as a black desktop.
+        if (!files.isEmpty()) {
+            Bitmap still = ThumbCache.load(context, files.get(index));
+            if (still != null) {
+                root.setBackground(new android.graphics.drawable.BitmapDrawable(root.getResources(), still));
+            }
+        }
     }
 
     /** Memory pressure: the film comes back on the next start, so give the decoder up now. */
