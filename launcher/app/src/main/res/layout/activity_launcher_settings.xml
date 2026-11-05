@@ -46,6 +46,9 @@
             <TextView android:id="@+id/columns5" style="@style/SettingsColumnChoice" android:text="5" />
             <TextView android:id="@+id/columns6" style="@style/SettingsColumnChoice" android:text="6" />
             <TextView android:id="@+id/columns7" style="@style/SettingsColumnChoice" android:text="7" />
+            <TextView android:id="@+id/columns8" style="@style/SettingsColumnChoice" android:text="8" />
+            <TextView android:id="@+id/columns10" style="@style/SettingsColumnChoice" android:text="10" />
+            <TextView android:id="@+id/columns12" style="@style/SettingsColumnChoice" android:text="12" />
         </LinearLayout>
 
         <TextView

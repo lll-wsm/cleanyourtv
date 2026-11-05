@@ -28,7 +28,9 @@ public final class LauncherSettingsActivity extends Activity {
 
     static final String EXTRA_REORDER = "com.gathin.tvhome.extra.REORDER_FROM_SETTINGS";
     private SharedPreferences choices;
-    private final TextView[] columnChoices = new TextView[4];
+    /** The sizes the settings row offers; 9 and 11 are reachable from a theme's config.json only. */
+    private static final int[] COLUMN_VALUES = {4, 5, 6, 7, 8, 10, 12};
+    private final TextView[] columnChoices = new TextView[COLUMN_VALUES.length];
     private final TextView[] rowChoices = new TextView[4];
     private static final int[] DOCK_OPACITIES = {100, 70, 50, 30};
     private final TextView[] dockChoices = new TextView[DOCK_OPACITIES.length];
@@ -65,9 +67,10 @@ public final class LauncherSettingsActivity extends Activity {
         animations = config.animations;
         advancedEffects = config.animations && config.advancedEffects;
 
-        int[] ids = {R.id.columns4, R.id.columns5, R.id.columns6, R.id.columns7};
+        int[] ids = {R.id.columns4, R.id.columns5, R.id.columns6, R.id.columns7,
+                R.id.columns8, R.id.columns10, R.id.columns12};
         for (int i = 0; i < ids.length; i++) {
-            final int value = i + 4;
+            final int value = COLUMN_VALUES[i];
             columnChoices[i] = findViewById(ids[i]);
             columnChoices[i].setOnClickListener(v -> {
                 if (columns == value) return;
@@ -174,7 +177,7 @@ public final class LauncherSettingsActivity extends Activity {
                 open(SystemSettings.intent(this, Settings.ACTION_SETTINGS)));
         refresh();
         if (config.launcherSettingsButton) reorderChoice.requestFocus();
-        else columnChoices[Math.max(0, Math.min(columns - 4, 3))].requestFocus();
+        else columnChoices[Math.max(0, Math.min(columns - 4, COLUMN_VALUES.length - 1))].requestFocus();
     }
 
     private void reverseRow(TextView[] views) {
@@ -294,7 +297,7 @@ public final class LauncherSettingsActivity extends Activity {
 
     private void refresh() {
         for (int i = 0; i < columnChoices.length; i++) {
-            columnChoices[i].setSelected(columns == i + 4);
+            columnChoices[i].setSelected(columns == COLUMN_VALUES[i]);
         }
         for (int i = 0; i < rowChoices.length; i++) {
             rowChoices[i].setSelected(rowsBelowDock == i);
